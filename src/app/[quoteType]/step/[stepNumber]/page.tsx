@@ -6,6 +6,10 @@ import { quoteTypes } from '@/config/quoteTypes';
 import { useFormContext } from '@/context/FormContext';
 import FormField from '@/components/FormField';
 import FieldGroup from '@/components/FieldGroup';
+import HouseholdMembersField from '@/components/HouseholdMembersField';
+import DriversField from '@/components/DriversField';
+import VehiclesField from '@/components/VehiclesField';
+import CoverageField from '@/components/CoverageField';
 
 interface QuoteStepPageProps {
   params: Promise<{
@@ -18,6 +22,42 @@ function StepContent({ params }: QuoteStepPageProps) {
   const router = useRouter();
   const { formData, updateFormData } = useFormContext();
   const [errors, setErrors] = useState<string[]>([]);
+  const [selectedDrivers, setSelectedDrivers] = useState<string[]>([]);
+  const [selectedVehicles, setSelectedVehicles] = useState<string[]>([]);
+  const [drivers, setDrivers] = useState<any[]>([]);
+  const [vehicles, setVehicles] = useState<any[]>([]);
+
+  // Initialize selected drivers and vehicles from form data
+  useEffect(() => {
+    const driverIds = ['driver1', 'driver2', 'driver3'];
+    const vehicleIds = ['vehicle1', 'vehicle2', 'vehicle3'];
+    
+    const selectedDriversFromForm = driverIds.filter(id => formData[`selectedDriver_${id}`]);
+    const selectedVehiclesFromForm = vehicleIds.filter(id => formData[`selectedVehicle_${id}`]);
+    
+    setSelectedDrivers(selectedDriversFromForm);
+    setSelectedVehicles(selectedVehiclesFromForm);
+    
+    // Initialize drivers from form data
+    if (formData.drivers) {
+      try {
+        const savedDrivers = JSON.parse(formData.drivers as string);
+        setDrivers(savedDrivers);
+      } catch (e) {
+        console.error('Error parsing drivers data:', e);
+      }
+    }
+    
+    // Initialize vehicles from form data
+    if (formData.vehicles) {
+      try {
+        const savedVehicles = JSON.parse(formData.vehicles as string);
+        setVehicles(savedVehicles);
+      } catch (e) {
+        console.error('Error parsing vehicles data:', e);
+      }
+    }
+  }, [formData]);
 
   const { quoteType: quoteTypeParam, stepNumber: stepNumberParam } = use(params);
   const quoteType = quoteTypes[quoteTypeParam];
@@ -69,6 +109,7 @@ function StepContent({ params }: QuoteStepPageProps) {
   const validateStep = () => {
     const newErrors: string[] = [];
     
+    // Standard field validation
     currentStep.fields.forEach(field => {
       // Skip validation for section headers
       if (field.type === 'section') return;
@@ -77,6 +118,37 @@ function StepContent({ params }: QuoteStepPageProps) {
         newErrors.push(`${field.label} is required`);
       }
     });
+
+    // Special validation for Vehicle Information step
+    if (quoteTypeParam === 'auto-quote' && stepNumber === 4 && currentStep.title === 'Vehicle Information') {
+      if (formData.vehicles) {
+        try {
+          const vehiclesData = JSON.parse(formData.vehicles as string);
+          
+          if (!vehiclesData || vehiclesData.length === 0) {
+            newErrors.push('At least one vehicle is required');
+          } else {
+            vehiclesData.forEach((vehicle: any, index: number) => {
+              const vehicleNumber = index + 1;
+              
+              if (!vehicle.modelYear || vehicle.modelYear === '(Select)') {
+                newErrors.push(`Vehicle ${vehicleNumber}: Model Year is required`);
+              }
+              if (!vehicle.make || vehicle.make === '(Select)') {
+                newErrors.push(`Vehicle ${vehicleNumber}: Make is required`);
+              }
+              if (!vehicle.model || vehicle.model.trim() === '') {
+                newErrors.push(`Vehicle ${vehicleNumber}: Model is required`);
+              }
+            });
+          }
+        } catch (e) {
+          newErrors.push('Vehicle information is invalid');
+        }
+      } else {
+        newErrors.push('At least one vehicle is required');
+      }
+    }
 
     setErrors(newErrors);
     return newErrors.length === 0;
@@ -123,6 +195,38 @@ function StepContent({ params }: QuoteStepPageProps) {
     });
   };
 
+  const handleDriverSelectionChange = (driverId: string, selected: boolean) => {
+    setSelectedDrivers(prev => 
+      selected 
+        ? [...prev, driverId]
+        : prev.filter(id => id !== driverId)
+    );
+    // Also update form data for persistence
+    updateFormData({ [`selectedDriver_${driverId}`]: selected });
+  };
+
+  const handleVehicleSelectionChange = (vehicleId: string, selected: boolean) => {
+    setSelectedVehicles(prev => 
+      selected 
+        ? [...prev, vehicleId]
+        : prev.filter(id => id !== vehicleId)
+    );
+    // Also update form data for persistence
+    updateFormData({ [`selectedVehicle_${vehicleId}`]: selected });
+  };
+
+  const handleDriversChange = (updatedDrivers: any[]) => {
+    setDrivers(updatedDrivers);
+    // Store drivers data in form context for persistence
+    updateFormData({ drivers: JSON.stringify(updatedDrivers) });
+  };
+
+  const handleVehiclesChange = (updatedVehicles: any[]) => {
+    setVehicles(updatedVehicles);
+    // Store vehicles data in form context for persistence
+    updateFormData({ vehicles: JSON.stringify(updatedVehicles) });
+  };
+
   return (
     <div className="container">
       <div className="step-indicator">
@@ -134,8 +238,8 @@ function StepContent({ params }: QuoteStepPageProps) {
         <h2>{currentStep.title}</h2>
         {currentStep.description && <p>{currentStep.description}</p>}
 
-        {/* Add Get/Edit Replacement Cost button for coverage step */}
-        {currentStep.title === 'Coverage Information' && (
+        {/* Add Get/Edit Replacement Cost button for home insurance coverage step only */}
+        {quoteTypeParam === 'home-quote' && currentStep.title === 'Coverage Information' && (
           <div style={{ margin: '20px 0', textAlign: 'center' }}>
             <button 
               type="button"
@@ -166,58 +270,100 @@ function StepContent({ params }: QuoteStepPageProps) {
           </div>
         )}
 
-        {(() => {
-          const fieldGroups: Record<string, typeof currentStep.fields> = {};
-          const ungroupedFields: typeof currentStep.fields = [];
+        {/* Special rendering for Household Members step in auto-quote */}
+        {quoteTypeParam === 'auto-quote' && stepNumber === 2 && currentStep.title === 'Household Members' ? (
+          <HouseholdMembersField
+            onDriverSelectionChange={handleDriverSelectionChange}
+            onVehicleSelectionChange={handleVehicleSelectionChange}
+            onRelationshipChange={(driverId, relationship) => updateFormData({ [`relationship_${driverId}`]: relationship })}
+            selectedDrivers={selectedDrivers}
+            selectedVehicles={selectedVehicles}
+            formData={formData}
+            namedInsuredInfo={{
+              firstName: formData.firstName as string,
+              lastName: formData.lastName as string,
+              dateOfBirth: formData.dateOfBirth as string,
+              gender: formData.gender as string
+            }}
+          />
+        ) : quoteTypeParam === 'auto-quote' && stepNumber === 3 && currentStep.title === 'Drivers' ? (
+          <DriversField
+            primaryDriverInfo={{
+              firstName: formData.firstName as string,
+              lastName: formData.lastName as string,
+              dateOfBirth: formData.dateOfBirth as string,
+              gender: formData.gender as string,
+              maritalStatus: formData.maritalStatus as string,
+              state: formData.state as string,
+              licenseNumber: formData.licenseNumber as string
+            }}
+            onDriversChange={handleDriversChange}
+            existingDrivers={formData.drivers ? JSON.parse(formData.drivers as string) : []}
+          />
+        ) : quoteTypeParam === 'auto-quote' && stepNumber === 4 && currentStep.title === 'Vehicle Information' ? (
+          <VehiclesField
+            onVehiclesChange={handleVehiclesChange}
+            existingVehicles={formData.vehicles ? JSON.parse(formData.vehicles as string) : []}
+          />
+        ) : quoteTypeParam === 'auto-quote' && stepNumber === 5 && currentStep.title === 'Coverage Information' ? (
+          <CoverageField
+            formData={formData}
+            onFieldChange={handleFieldChange}
+          />
+        ) : (
+          (() => {
+            const fieldGroups: Record<string, typeof currentStep.fields> = {};
+            const ungroupedFields: typeof currentStep.fields = [];
 
-          // Group fields by their group property
-          currentStep.fields.forEach(field => {
-            if (field.group) {
-              if (!fieldGroups[field.group]) {
-                fieldGroups[field.group] = [];
+            // Group fields by their group property
+            currentStep.fields.forEach(field => {
+              if (field.group) {
+                if (!fieldGroups[field.group]) {
+                  fieldGroups[field.group] = [];
+                }
+                fieldGroups[field.group].push(field);
+              } else {
+                ungroupedFields.push(field);
               }
-              fieldGroups[field.group].push(field);
-            } else {
-              ungroupedFields.push(field);
-            }
-          });
+            });
 
-          const elements: React.ReactNode[] = [];
-          let ungroupedIndex = 0;
-          let groupIndex = 0;
+            const elements: React.ReactNode[] = [];
+            let ungroupedIndex = 0;
+            let groupIndex = 0;
 
-          // Render fields in their original order, respecting groups
-          currentStep.fields.forEach((field, index) => {
-            if (field.group) {
-              // Check if this is the first field in this group
-              const groupFields = fieldGroups[field.group];
-              const isFirstInGroup = groupFields[0] === field;
-              
-              if (isFirstInGroup) {
+            // Render fields in their original order, respecting groups
+            currentStep.fields.forEach((field, index) => {
+              if (field.group) {
+                // Check if this is the first field in this group
+                const groupFields = fieldGroups[field.group];
+                const isFirstInGroup = groupFields[0] === field;
+                
+                if (isFirstInGroup) {
+                  elements.push(
+                    <FieldGroup
+                      key={`group-${field.group}`}
+                      fields={groupFields}
+                      formData={formData}
+                      onFieldChange={handleFieldChange}
+                    />
+                  );
+                }
+              } else {
                 elements.push(
-                  <FieldGroup
-                    key={`group-${field.group}`}
-                    fields={groupFields}
+                  <FormField
+                    key={field.name}
+                    field={field}
+                    value={formData[field.name] || ''}
+                    onChange={(value) => handleFieldChange(field.name, value)}
                     formData={formData}
-                    onFieldChange={handleFieldChange}
                   />
                 );
               }
-            } else {
-              elements.push(
-                <FormField
-                  key={field.name}
-                  field={field}
-                  value={formData[field.name] || ''}
-                  onChange={(value) => handleFieldChange(field.name, value)}
-                  formData={formData}
-                />
-              );
-            }
-          });
+            });
 
-          return elements;
-        })()}
+            return elements;
+          })()
+        )}
       </div>
 
       <div className="navigation">

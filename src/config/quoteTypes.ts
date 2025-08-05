@@ -229,7 +229,7 @@ export const quoteTypes: Record<string, QuoteType> = {
             type: 'select',
             options: ['(Select)', 'Yes', 'No'],
             group: 'roofHistory',
-            width: '50%'
+            width: '35%'
           },
           {
             name: 'roofReplacementYear',
@@ -237,6 +237,30 @@ export const quoteTypes: Record<string, QuoteType> = {
             type: 'text',
             placeholder: 'YYYY',
             group: 'roofHistory',
+            width: '30%'
+          },
+          {
+            name: 'roofAge',
+            label: 'Age of roof',
+            type: 'text',
+            placeholder: 'Enter age in years',
+            group: 'roofHistory',
+            width: '25%'
+          },
+          {
+            name: 'completeRoofReplacementYear',
+            label: 'Year of complete roof replacement',
+            type: 'text',
+            placeholder: 'YYYY',
+            group: 'roofHistory2',
+            width: '45%'
+          },
+          {
+            name: 'roofReplacementTimeframe',
+            label: 'How long ago was your roof replaced or was the roof replaced?',
+            type: 'text',
+            placeholder: 'Enter timeframe (e.g., 5 years ago, never)',
+            group: 'roofHistory2',
             width: '50%'
           },
           {
@@ -535,9 +559,36 @@ export const quoteTypes: Record<string, QuoteType> = {
     steps: [
       {
         id: 1,
-        title: 'Driver Information',
-        description: 'Tell us about the primary driver',
+        title: 'Named and Shared Applicant Information',
+        description: 'Tell us about the primary driver and policy details',
         fields: [
+          {
+            name: 'policyDetailsSection',
+            label: 'Policy Details',
+            type: 'section'
+          },
+          {
+            name: 'ratingState',
+            label: 'Rating State',
+            type: 'select',
+            required: true,
+            options: ['(Select)', ...US_STATES],
+            group: 'policyInfo',
+            width: '50%'
+          },
+          {
+            name: 'effectiveDate',
+            label: 'Effective Date',
+            type: 'date',
+            required: true,
+            group: 'policyInfo',
+            width: '50%'
+          },
+          {
+            name: 'namedInsuredSection',
+            label: 'Named Insured Applicant Information',
+            type: 'section'
+          },
           {
             name: 'firstName',
             label: 'First Name',
@@ -558,7 +609,18 @@ export const quoteTypes: Record<string, QuoteType> = {
             name: 'dateOfBirth',
             label: 'Date of Birth',
             type: 'date',
-            required: true
+            required: true,
+            group: 'personalBasic',
+            width: '50%'
+          },
+          {
+            name: 'gender',
+            label: 'Gender',
+            type: 'select',
+            required: true,
+            options: ['(Select)', 'Male', 'Female', 'Non-binary', 'Prefer not to say'],
+            group: 'personalBasic',
+            width: '50%'
           },
           {
             name: 'licenseNumber',
@@ -571,50 +633,69 @@ export const quoteTypes: Record<string, QuoteType> = {
             label: 'State (where vehicle is primarily garaged)',
             type: 'select',
             required: true,
-            options: US_STATES
+            options: ['(Select)', ...US_STATES]
+          },
+          {
+            name: 'maritalStatus',
+            label: 'Marital Status',
+            type: 'select',
+            required: true,
+            options: ['(Select)', 'Single', 'Married', 'Divorced', 'Widowed', 'Separated', 'Domestic Partner'],
+            group: 'personal',
+            width: '33%'
+          },
+          {
+            name: 'occupation',
+            label: 'Occupation',
+            type: 'select',
+            required: true,
+            options: [
+              '(Select)', 'Professional/Technical', 'Manager/Executive', 'Sales/Marketing', 
+              'Administrative/Clerical', 'Service Industry', 'Education', 'Healthcare', 
+              'Finance/Banking', 'Government', 'Manufacturing', 'Construction', 
+              'Transportation', 'Agriculture', 'Retail', 'Military', 'Student', 
+              'Homemaker', 'Retired', 'Unemployed', 'Other'
+            ],
+            group: 'personal',
+            width: '33%'
+          },
+          {
+            name: 'education',
+            label: 'Education Level',
+            type: 'select',
+            required: true,
+            options: [
+              '(Select)', 'High School or Less', 'Some College', 'Associate Degree', 
+              'Bachelor\'s Degree', 'Master\'s Degree', 'Doctoral Degree', 'Professional Degree'
+            ],
+            group: 'personal',
+            width: '34%'
           }
         ]
       },
       {
         id: 2,
+        title: 'Household Members',
+        description: 'Review and select additional drivers and vehicles for your policy',
+        fields: []
+      },
+      {
+        id: 3,
+        title: 'Drivers',
+        description: 'Tell us about all drivers who will be covered',
+        fields: []
+      },
+      {
+        id: 4,
         title: 'Vehicle Information',
-        description: 'Tell us about your vehicle',
-        fields: [
-          {
-            name: 'vehicleYear',
-            label: 'Vehicle Year',
-            type: 'select',
-            required: true,
-            options: ['2024', '2023', '2022', '2021', '2020', '2019', '2018', 'Older'],
-            group: 'vehicle',
-            width: '25%'
-          },
-          {
-            name: 'vehicleMake',
-            label: 'Vehicle Make',
-            type: 'text',
-            required: true,
-            placeholder: 'Honda, Toyota, Ford, etc.',
-            group: 'vehicle',
-            width: '35%'
-          },
-          {
-            name: 'vehicleModel',
-            label: 'Vehicle Model',
-            type: 'text',
-            required: true,
-            placeholder: 'Civic, Camry, F-150, etc.',
-            group: 'vehicle',
-            width: '40%'
-          },
-          {
-            name: 'vin',
-            label: 'VIN (Vehicle Identification Number)',
-            type: 'text',
-            required: true,
-            placeholder: '17-character VIN'
-          }
-        ]
+        description: 'Tell us about all vehicles that will be covered under this policy',
+        fields: []
+      },
+      {
+        id: 5,
+        title: 'Coverage Information',
+        description: 'Select your coverage preferences for your policy and vehicles',
+        fields: []
       }
     ]
   }

@@ -32,20 +32,47 @@ function SummaryContent({ params }: SummaryPageProps) {
 
   // Calculate a mock premium based on form data
   const calculatePremium = () => {
-    const basePremium = quoteTypeParam === 'home-quote' ? 1200 : 800;
+    let basePremium = quoteTypeParam === 'home-quote' ? 1200 : 800;
+    
+    // For auto insurance, calculate based on vehicles and coverage
+    if (quoteTypeParam === 'auto-quote') {
+      try {
+        const vehicles = formData.vehicles ? JSON.parse(formData.vehicles as string) : [];
+        basePremium = 600; // Base premium per vehicle
+        basePremium *= vehicles.length; // Multiply by number of vehicles
+        
+        // Add premium based on coverage selections
+        if (typeof formData.bodilyInjury === 'string' && formData.bodilyInjury.includes('100/300')) basePremium += 150;
+        if (typeof formData.propertyDamageLiability === 'string' && parseInt(formData.propertyDamageLiability.replace(/[,]/g, '')) >= 100000) basePremium += 100;
+        if (formData.medicalPayments && formData.medicalPayments !== 'No Coverage') basePremium += 50;
+        
+        // Add premium for comprehensive/collision on vehicles
+        vehicles.forEach((vehicle: any) => {
+          const collisionCoverage = formData[`collision_${vehicle.id}`];
+          const comprehensiveCoverage = formData[`comprehensive_${vehicle.id}`];
+          
+          if (typeof collisionCoverage === 'string' && !collisionCoverage.includes('No Coverage')) basePremium += 300;
+          if (typeof comprehensiveCoverage === 'string' && !comprehensiveCoverage.includes('No Coverage')) basePremium += 200;
+        });
+        
+      } catch (e) {
+        console.error('Error calculating auto premium:', e);
+      }
+    }
     
     // Add some variation based on form data for realism
     const dataString = JSON.stringify(formData);
-    const variation = dataString.length * 3; // Simple hash-like variation
-    return basePremium + (variation % 400);
+    const variation = dataString.length * 2; // Simple hash-like variation
+    return basePremium + (variation % 300);
   };
 
   const premium = calculatePremium();
 
   // Calculate term dates
   const calculateTermDates = () => {
-    const startDate = formData.desiredCoverageStartDate ? 
-      new Date(formData.desiredCoverageStartDate as string) : 
+    const startDateField = quoteTypeParam === 'home-quote' ? 'desiredCoverageStartDate' : 'effectiveDate';
+    const startDate = formData[startDateField] ? 
+      new Date(formData[startDateField] as string) : 
       new Date();
     
     const endDate = new Date(startDate);
@@ -73,22 +100,94 @@ function SummaryContent({ params }: SummaryPageProps) {
 
   const termDates = calculateTermDates();
 
-  // Get coverage information
-  const getCoverageInfo = () => {
-    const coverageStep = quoteType.steps.find(step => step.title === 'Coverage Information');
-    if (!coverageStep) return null;
-
-    return coverageStep.fields
-      .filter(field => field.type !== 'section' && formData[field.name])
-      .map(field => ({
-        label: field.label,
-        value: formData[field.name],
-        type: field.type,
-        baseField: field.baseField
-      }));
+  // Get vehicle information for auto quotes
+  const getVehicleInfo = () => {
+    if (quoteTypeParam !== 'auto-quote') return [];
+    
+    try {
+      return formData.vehicles ? JSON.parse(formData.vehicles as string) : [];
+    } catch (e) {
+      console.error('Error parsing vehicles data:', e);
+      return [];
+    }
   };
 
+  // Get coverage information
+  const getCoverageInfo = () => {
+    if (quoteTypeParam === 'auto-quote') {
+      // Auto insurance coverage data is stored directly in formData
+      const policyLevelCoverages = [
+        { key: 'bodilyInjury', label: 'Bodily Injury' },
+        { key: 'combinedSingleLimits', label: 'Combined Single Limits' },
+        { key: 'propertyDamageLiability', label: 'Property Damage Liability' },
+        { key: 'uninsuredMotorist', label: 'Uninsured/Underinsured Motorist' },
+        { key: 'firstAccidentForgiveness', label: 'First Accident Forgiveness' },
+        { key: 'extendedNonOwnedCoverage', label: 'Extended Non-Owned Coverage' },
+        { key: 'medicalPayments', label: 'Medical Payments' }
+      ];
+
+      return policyLevelCoverages
+        .filter(coverage => formData[coverage.key])
+        .map(coverage => ({
+          label: coverage.label,
+          value: formData[coverage.key]
+        }));
+    } else {
+      // Home insurance coverage logic (existing)
+      const coverageStep = quoteType.steps.find(step => step.title === 'Coverage Information');
+      if (!coverageStep) return null;
+
+      return coverageStep.fields
+        .filter(field => field.type !== 'section' && formData[field.name])
+        .map(field => ({
+          label: field.label,
+          value: formData[field.name],
+          type: field.type,
+          baseField: field.baseField
+        }));
+    }
+  };
+
+  // Get vehicle-specific coverage information for auto quotes
+  const getVehicleCoverageInfo = () => {
+    if (quoteTypeParam !== 'auto-quote') return {};
+    
+    const vehicles = getVehicleInfo();
+    const vehicleCoverageTypes = [
+      { key: 'uninsuredMotoristsPropertyDamage', label: 'Uninsured/Underinsured Motorists Property Damage' },
+      { key: 'collision', label: 'Collision' },
+      { key: 'comprehensive', label: 'Comprehensive' },
+      { key: 'autoLoanLease', label: 'Auto Loan/Lease' },
+      { key: 'roadsideAssistance', label: 'Roadside Assistance' },
+      { key: 'customizingEquipment', label: 'Customizing Equipment' },
+      { key: 'customAudioSystem', label: 'Custom Audio System' },
+      { key: 'transportationExpense', label: 'Transportation Expense' },
+      { key: 'autoReplacement', label: 'Auto Replacement' },
+      { key: 'originalEquipmentManufacturers', label: 'Original Equipment Manufacturers Coverage' },
+      { key: 'mexicoCoverage', label: 'Mexico Coverage' },
+      { key: 'rideSharing', label: 'Ride Sharing' },
+      { key: 'portableElectronicMedia', label: 'Portable Electronic Media' },
+      { key: 'tripInterruption', label: 'Trip Interruption' },
+      { key: 'diminishingDeductible', label: 'Diminishing Deductible' }
+    ];
+
+    const vehicleCoverages: Record<string, any[]> = {};
+    
+    vehicles.forEach((vehicle: any) => {
+      vehicleCoverages[vehicle.id] = vehicleCoverageTypes
+        .filter(coverage => formData[`${coverage.key}_${vehicle.id}`])
+        .map(coverage => ({
+          label: coverage.label,
+          value: formData[`${coverage.key}_${vehicle.id}`]
+        }));
+    });
+
+    return vehicleCoverages;
+  };
+
+  const vehicles = getVehicleInfo();
   const coverageInfo = getCoverageInfo();
+  const vehicleCoverageInfo = getVehicleCoverageInfo();
 
   // Format coverage value for display
   const formatCoverageValue = (field: any) => {
@@ -157,10 +256,57 @@ function SummaryContent({ params }: SummaryPageProps) {
         </p>
       </div>
 
+      {/* Vehicle Information for Auto Insurance */}
+      {quoteTypeParam === 'auto-quote' && vehicles.length > 0 && (
+        <div className="form-section" style={{ marginBottom: '20px' }}>
+          <h3>Vehicle Information</h3>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', 
+            gap: '15px' 
+          }}>
+            {vehicles.map((vehicle: any, index: number) => (
+              <div key={vehicle.id} style={{ 
+                padding: '15px', 
+                border: '1px solid #ddd', 
+                borderRadius: '4px',
+                backgroundColor: '#fafafa'
+              }}>
+                <h4 style={{ 
+                  margin: '0 0 10px 0',
+                  fontSize: '16px',
+                  color: '#2c5aa0'
+                }}>
+                  Vehicle {index + 1}
+                </h4>
+                <div style={{ fontSize: '14px', lineHeight: '1.5' }}>
+                  <p style={{ margin: '0 0 3px 0' }}>
+                    <strong>Year/Make/Model:</strong> {vehicle.modelYear} {vehicle.make} {vehicle.model}
+                  </p>
+                  <p style={{ margin: '0 0 3px 0' }}>
+                    <strong>VIN:</strong> {vehicle.vin}
+                  </p>
+                  {vehicle.purchaseDate && (
+                    <p style={{ margin: '0 0 3px 0' }}>
+                      <strong>Purchase Date:</strong> {new Date(vehicle.purchaseDate).toLocaleDateString()}
+                    </p>
+                  )}
+                  {vehicle.annualMileageDropdown && (
+                    <p style={{ margin: '0' }}>
+                      <strong>Annual Mileage:</strong> {vehicle.annualMileageDropdown}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Coverage Summary */}
       {coverageInfo && coverageInfo.length > 0 && (
         <div className="form-section" style={{ marginBottom: '20px' }}>
-          <h3>Coverage Summary</h3>
+          <h3>{quoteTypeParam === 'auto-quote' ? 'Policy-Level Coverage Summary' : 'Coverage Summary'}</h3>
           <div style={{ 
             display: 'grid', 
             gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
@@ -195,11 +341,103 @@ function SummaryContent({ params }: SummaryPageProps) {
         </div>
       )}
 
-      {/* Contact Information Summary (Basic Info Only) */}
+      {/* Vehicle-Specific Coverage Summary for Auto Insurance */}
+      {quoteTypeParam === 'auto-quote' && vehicles.length > 0 && (
+        <div className="form-section" style={{ marginBottom: '20px' }}>
+          <h3>Vehicle Coverage Summary</h3>
+          <div style={{ 
+            border: '1px solid #ddd',
+            borderRadius: '4px',
+            overflow: 'hidden'
+          }}>
+            {/* Vehicle Headers */}
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: `300px repeat(${vehicles.length}, 1fr)`,
+              backgroundColor: '#f8f9fa',
+              borderBottom: '1px solid #ddd'
+            }}>
+              <div style={{ 
+                padding: '12px', 
+                borderRight: '1px solid #ddd',
+                fontWeight: 'bold',
+                fontSize: '14px'
+              }}>
+                Coverage Type
+              </div>
+              {vehicles.map((vehicle: any, index: number) => (
+                <div key={vehicle.id} style={{ 
+                  padding: '12px', 
+                  textAlign: 'center',
+                  borderRight: index < vehicles.length - 1 ? '1px solid #ddd' : 'none',
+                  fontWeight: 'bold',
+                  fontSize: '12px'
+                }}>
+                  <div>Vehicle {index + 1}</div>
+                  <div style={{ fontSize: '10px', color: '#666' }}>
+                    {vehicle.modelYear} {vehicle.make} {vehicle.model}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Coverage Rows */}
+            {Object.keys(vehicleCoverageInfo).length > 0 && 
+              vehicleCoverageInfo[vehicles[0]?.id]?.map((coverage, rowIndex) => (
+                <div key={coverage.label} style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: `300px repeat(${vehicles.length}, 1fr)`,
+                  backgroundColor: rowIndex % 2 === 0 ? '#f9f9f9' : 'white',
+                  borderBottom: '1px solid #eee'
+                }}>
+                  <div style={{ 
+                    padding: '8px 12px', 
+                    borderRight: '1px solid #ddd',
+                    display: 'flex',
+                    alignItems: 'center',
+                    fontSize: '12px'
+                  }}>
+                    {coverage.label}
+                  </div>
+                  {vehicles.map((vehicle: any, vehicleIndex: number) => {
+                    const vehicleCoverage = vehicleCoverageInfo[vehicle.id]?.find(
+                      vc => vc.label === coverage.label
+                    );
+                    return (
+                      <div key={`${coverage.label}_${vehicle.id}`} style={{ 
+                        padding: '8px', 
+                        borderRight: vehicleIndex < vehicles.length - 1 ? '1px solid #ddd' : 'none',
+                        fontSize: '11px',
+                        color: '#2c5aa0',
+                        fontWeight: '500'
+                      }}>
+                        {vehicleCoverage?.value || 'No Coverage'}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))
+            }
+          </div>
+        </div>
+      )}
+
+      {/* Policy Holder Information Summary */}
       <div className="form-section" style={{ marginBottom: '20px' }}>
         <h3>Policy Holder Information</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '15px' }}>
-          {[
+          {(quoteTypeParam === 'auto-quote' ? [
+            { key: 'firstName', label: 'First Name' },
+            { key: 'lastName', label: 'Last Name' },
+            { key: 'dateOfBirth', label: 'Date of Birth' },
+            { key: 'gender', label: 'Gender' },
+            { key: 'maritalStatus', label: 'Marital Status' },
+            { key: 'licenseNumber', label: 'Driver License Number' },
+            { key: 'ratingState', label: 'Rating State' },
+            { key: 'state', label: 'Vehicle Garaged State' },
+            { key: 'occupation', label: 'Occupation' },
+            { key: 'education', label: 'Education Level' }
+          ] : [
             { key: 'firstName', label: 'First Name' },
             { key: 'lastName', label: 'Last Name' },
             { key: 'phoneNumber', label: 'Phone Number' },
@@ -208,7 +446,7 @@ function SummaryContent({ params }: SummaryPageProps) {
             { key: 'city', label: 'City' },
             { key: 'state', label: 'State' },
             { key: 'zipCode', label: 'Zip Code' }
-          ].map(item => {
+          ]).map(item => {
             const value = formData[item.key];
             if (value) {
               return (
@@ -217,7 +455,10 @@ function SummaryContent({ params }: SummaryPageProps) {
                     {item.label}
                   </p>
                   <p style={{ margin: '0', fontSize: '14px' }}>
-                    {value.toString()}
+                    {item.key === 'dateOfBirth' && value ? 
+                      new Date(value.toString()).toLocaleDateString() : 
+                      value.toString()
+                    }
                   </p>
                 </div>
               );
