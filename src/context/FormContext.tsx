@@ -26,6 +26,7 @@ interface FormProviderProps {
 
 export function FormProvider({ children, quoteType }: FormProviderProps) {
   const [formData, setFormData] = useState<FormData>({});
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // Load data from sessionStorage on mount
   useEffect(() => {
@@ -33,23 +34,39 @@ export function FormProvider({ children, quoteType }: FormProviderProps) {
       const storedData = sessionStorage.getItem(`quote-${quoteType}`);
       if (storedData) {
         try {
-          setFormData(JSON.parse(storedData));
+          const parsedData = JSON.parse(storedData);
+          setFormData(parsedData);
         } catch (error) {
           console.error('Error parsing stored form data:', error);
+          // Clear corrupted data
+          sessionStorage.removeItem(`quote-${quoteType}`);
         }
       }
+      setIsLoaded(true);
     }
   }, [quoteType]);
 
-  // Save data to sessionStorage whenever formData changes
+  // Save data to sessionStorage whenever formData changes (but only after initial load)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem(`quote-${quoteType}`, JSON.stringify(formData));
+    if (typeof window !== 'undefined' && isLoaded) {
+      try {
+        sessionStorage.setItem(`quote-${quoteType}`, JSON.stringify(formData));
+      } catch (error) {
+        console.error('Error saving form data to sessionStorage:', error);
+      }
     }
-  }, [formData, quoteType]);
+  }, [formData, quoteType, isLoaded]);
 
   const updateFormData = (data: Partial<FormData>) => {
-    setFormData(prev => ({ ...prev, ...data }));
+    setFormData(prev => {
+      const newData = { ...prev };
+      Object.entries(data).forEach(([key, value]) => {
+        if (value !== undefined) {
+          newData[key] = value;
+        }
+      });
+      return newData;
+    });
   };
 
   const clearFormData = () => {
