@@ -24,9 +24,7 @@ interface HouseholdMembersFieldProps {
   onDriverSelectionChange: (driverId: string, selected: boolean) => void;
   onVehicleSelectionChange: (vehicleId: string, selected: boolean) => void;
   onRelationshipChange: (driverId: string, relationship: string) => void;
-  selectedDrivers: string[];
-  selectedVehicles: string[];
-  formData: Record<string, any>;
+  formData: Record<string, unknown>;
   namedInsuredInfo?: {
     firstName?: string;
     lastName?: string;
@@ -96,17 +94,17 @@ const RELATIONSHIP_OPTIONS = [
 ];
 
 export default function HouseholdMembersField({ 
-  onDriverSelectionChange, 
+  onDriverSelectionChange: _onDriverSelectionChange, 
   onVehicleSelectionChange,
   onRelationshipChange,
-  selectedDrivers,
-  selectedVehicles,
   formData,
   namedInsuredInfo 
 }: HouseholdMembersFieldProps) {
-  const handleDriverSelection = (driverId: string, selected: boolean) => {
-    onDriverSelectionChange(driverId, selected);
-  };
+
+  // Derive selected vehicles from formData
+  const selectedVehicles = SAMPLE_VEHICLES
+    .map(vehicle => vehicle.id)
+    .filter(vehicleId => formData[`selectedVehicle_${vehicleId}`]);
 
   const handleVehicleSelection = (vehicleId: string, selected: boolean) => {
     onVehicleSelectionChange(vehicleId, selected);
@@ -185,7 +183,7 @@ export default function HouseholdMembersField({
               <div>
                 <select 
                   style={{ width: '100%', padding: '4px', border: '1px solid #ccc' }} 
-                  value={formData[`relationship_${driver.id}`] || '<Select>'}
+                  value={(formData[`relationship_${driver.id}`] as string) || '<Select>'}
                   onChange={(e) => handleRelationshipChange(driver.id, e.target.value)}
                 >
                   {RELATIONSHIP_OPTIONS.map(option => (

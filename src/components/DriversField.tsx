@@ -449,7 +449,7 @@ export default function DriversField({ primaryDriverInfo, onDriversChange, exist
 
               <div style={{ marginBottom: '20px' }}>
                 <label style={{ display: 'block', marginBottom: '12px', fontWeight: 'bold' }}>
-                  Has this driver's license been suspended/revoked in the last 5 years? <span style={{ color: 'red' }}>*</span>
+                  Has this driver&apos;s license been suspended/revoked in the last 5 years? <span style={{ color: 'red' }}>*</span>
                 </label>
                 <div style={{ display: 'flex', gap: '20px' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

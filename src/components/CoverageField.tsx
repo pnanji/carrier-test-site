@@ -15,7 +15,7 @@ interface Vehicle {
 }
 
 interface CoverageFieldProps {
-  formData: Record<string, any>;
+  formData: Record<string, unknown>;
   onFieldChange: (fieldName: string, value: string | boolean) => void;
 }
 
@@ -222,7 +222,7 @@ export default function CoverageField({ formData, onFieldChange }: CoverageField
                   border: '1px solid #ddd' 
                 }}>
                   <select
-                    value={formData[coverage.name] || coverage.options[0]}
+                    value={(formData[coverage.name] as string) || coverage.options[0]}
                     onChange={(e) => onFieldChange(coverage.name, e.target.value)}
                     style={{ 
                       width: '100%', 
@@ -321,7 +321,7 @@ export default function CoverageField({ formData, onFieldChange }: CoverageField
                     borderRight: vehicleIndex < vehicles.length - 1 ? '1px solid #ddd' : 'none'
                   }}>
                     <select
-                      value={formData[`${coverage.name}_${vehicle.id}`] || coverage.options[0]}
+                      value={(formData[`${coverage.name}_${vehicle.id}`] as string) || coverage.options[0]}
                       onChange={(e) => onFieldChange(`${coverage.name}_${vehicle.id}`, e.target.value)}
                       style={{ 
                         width: '100%', 

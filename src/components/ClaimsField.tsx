@@ -141,7 +141,7 @@ export default function ClaimsField({ field }: ClaimsFieldProps) {
 
       {claims.length === 0 && (
         <div className="no-claims">
-          <p>Click "Add Claim" to enter loss history details.</p>
+          <p>Click &quot;Add Claim&quot; to enter loss history details.</p>
         </div>
       )}
     </div>

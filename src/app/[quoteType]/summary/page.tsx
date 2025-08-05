@@ -47,7 +47,7 @@ function SummaryContent({ params }: SummaryPageProps) {
         if (formData.medicalPayments && formData.medicalPayments !== 'No Coverage') basePremium += 50;
         
         // Add premium for comprehensive/collision on vehicles
-        vehicles.forEach((vehicle: any) => {
+        vehicles.forEach((vehicle: Record<string, unknown>) => {
           const collisionCoverage = formData[`collision_${vehicle.id}`];
           const comprehensiveCoverage = formData[`comprehensive_${vehicle.id}`];
           
@@ -171,14 +171,14 @@ function SummaryContent({ params }: SummaryPageProps) {
       { key: 'diminishingDeductible', label: 'Diminishing Deductible' }
     ];
 
-    const vehicleCoverages: Record<string, any[]> = {};
+    const vehicleCoverages: Record<string, Array<Record<string, unknown>>> = {};
     
-    vehicles.forEach((vehicle: any) => {
-      vehicleCoverages[vehicle.id] = vehicleCoverageTypes
-        .filter(coverage => formData[`${coverage.key}_${vehicle.id}`])
+    vehicles.forEach((vehicle: Record<string, unknown>) => {
+      vehicleCoverages[vehicle.id as string] = vehicleCoverageTypes
+        .filter(coverage => formData[`${coverage.key}_${vehicle.id as string}`])
         .map(coverage => ({
           label: coverage.label,
-          value: formData[`${coverage.key}_${vehicle.id}`]
+          value: formData[`${coverage.key}_${vehicle.id as string}`]
         }));
     });
 
@@ -190,9 +190,9 @@ function SummaryContent({ params }: SummaryPageProps) {
   const vehicleCoverageInfo = getVehicleCoverageInfo();
 
   // Format coverage value for display
-  const formatCoverageValue = (field: any) => {
+  const formatCoverageValue = (field: Record<string, unknown>) => {
     if (field.type === 'percentage-currency' && field.baseField) {
-      const baseValue = formData[field.baseField] as string || '0';
+      const baseValue = formData[field.baseField as string] as string || '0';
       const numericBase = parseFloat(baseValue.replace(/[^0-9.]/g, ''));
       const percentage = parseFloat(field.value as string || '0');
       const calculatedAmount = (numericBase * percentage / 100).toLocaleString('en-US', {
@@ -265,8 +265,8 @@ function SummaryContent({ params }: SummaryPageProps) {
             gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', 
             gap: '15px' 
           }}>
-            {vehicles.map((vehicle: any, index: number) => (
-              <div key={vehicle.id} style={{ 
+            {vehicles.map((vehicle: Record<string, unknown>, index: number) => (
+              <div key={vehicle.id as string} style={{ 
                 padding: '15px', 
                 border: '1px solid #ddd', 
                 borderRadius: '4px',
@@ -281,19 +281,19 @@ function SummaryContent({ params }: SummaryPageProps) {
                 </h4>
                 <div style={{ fontSize: '14px', lineHeight: '1.5' }}>
                   <p style={{ margin: '0 0 3px 0' }}>
-                    <strong>Year/Make/Model:</strong> {vehicle.modelYear} {vehicle.make} {vehicle.model}
+                    <strong>Year/Make/Model:</strong> {vehicle.modelYear as string} {vehicle.make as string} {vehicle.model as string}
                   </p>
                   <p style={{ margin: '0 0 3px 0' }}>
-                    <strong>VIN:</strong> {vehicle.vin}
+                    <strong>VIN:</strong> {vehicle.vin as string}
                   </p>
-                  {vehicle.purchaseDate && (
+                  {!!vehicle.purchaseDate && (
                     <p style={{ margin: '0 0 3px 0' }}>
-                      <strong>Purchase Date:</strong> {new Date(vehicle.purchaseDate).toLocaleDateString()}
+                      <strong>Purchase Date:</strong> {new Date(vehicle.purchaseDate as string).toLocaleDateString()}
                     </p>
                   )}
-                  {vehicle.annualMileageDropdown && (
+                  {!!vehicle.annualMileageDropdown && (
                     <p style={{ margin: '0' }}>
-                      <strong>Annual Mileage:</strong> {vehicle.annualMileageDropdown}
+                      <strong>Annual Mileage:</strong> {vehicle.annualMileageDropdown as string}
                     </p>
                   )}
                 </div>
@@ -365,8 +365,8 @@ function SummaryContent({ params }: SummaryPageProps) {
               }}>
                 Coverage Type
               </div>
-              {vehicles.map((vehicle: any, index: number) => (
-                <div key={vehicle.id} style={{ 
+              {vehicles.map((vehicle: Record<string, unknown>, index: number) => (
+                <div key={vehicle.id as string} style={{ 
                   padding: '12px', 
                   textAlign: 'center',
                   borderRight: index < vehicles.length - 1 ? '1px solid #ddd' : 'none',
@@ -375,7 +375,7 @@ function SummaryContent({ params }: SummaryPageProps) {
                 }}>
                   <div>Vehicle {index + 1}</div>
                   <div style={{ fontSize: '10px', color: '#666' }}>
-                    {vehicle.modelYear} {vehicle.make} {vehicle.model}
+                    {vehicle.modelYear as string} {vehicle.make as string} {vehicle.model as string}
                   </div>
                 </div>
               ))}
@@ -383,8 +383,8 @@ function SummaryContent({ params }: SummaryPageProps) {
 
             {/* Coverage Rows */}
             {Object.keys(vehicleCoverageInfo).length > 0 && 
-              vehicleCoverageInfo[vehicles[0]?.id]?.map((coverage, rowIndex) => (
-                <div key={coverage.label} style={{ 
+              vehicleCoverageInfo[vehicles[0]?.id as string]?.map((coverage: Record<string, unknown>, rowIndex: number) => (
+                <div key={coverage.label as string} style={{ 
                   display: 'grid', 
                   gridTemplateColumns: `300px repeat(${vehicles.length}, 1fr)`,
                   backgroundColor: rowIndex % 2 === 0 ? '#f9f9f9' : 'white',
@@ -397,11 +397,11 @@ function SummaryContent({ params }: SummaryPageProps) {
                     alignItems: 'center',
                     fontSize: '12px'
                   }}>
-                    {coverage.label}
+                    {coverage.label as string}
                   </div>
-                  {vehicles.map((vehicle: any, vehicleIndex: number) => {
-                    const vehicleCoverage = vehicleCoverageInfo[vehicle.id]?.find(
-                      vc => vc.label === coverage.label
+                  {vehicles.map((vehicle: Record<string, unknown>, vehicleIndex: number) => {
+                    const vehicleCoverage = vehicleCoverageInfo[vehicle.id as string]?.find(
+                      (vc: Record<string, unknown>) => vc.label === coverage.label
                     );
                     return (
                       <div key={`${coverage.label}_${vehicle.id}`} style={{ 
@@ -411,7 +411,7 @@ function SummaryContent({ params }: SummaryPageProps) {
                         color: '#2c5aa0',
                         fontWeight: '500'
                       }}>
-                        {vehicleCoverage?.value || 'No Coverage'}
+                        {(vehicleCoverage?.value as string) || 'No Coverage'}
                       </div>
                     );
                   })}

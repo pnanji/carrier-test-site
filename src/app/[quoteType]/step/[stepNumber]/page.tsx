@@ -11,6 +11,38 @@ import DriversField from '@/components/DriversField';
 import VehiclesField from '@/components/VehiclesField';
 import CoverageField from '@/components/CoverageField';
 
+// Driver type from DriversField component
+interface Driver {
+  id: string;
+  firstName: string;
+  middleName: string;
+  lastName: string;
+  birthDate: string;
+  gender: string;
+  maritalStatus: string;
+  relationshipToInsured: string;
+  driverType: string;
+  licenseState: string;
+  licenseNumber: string;
+  ageWhenFirstLicensed: string;
+  licenseSuspended: string;
+  sr22Filing: string;
+  isPrimary?: boolean;
+}
+
+// Vehicle type from VehiclesField component
+interface Vehicle {
+  id: string;
+  vin: string;
+  modelYear: string;
+  make: string;
+  model: string;
+  purchaseDate: string;
+  annualMileageText: string;
+  annualMileageDropdown: string;
+  isRentedOrLeased: string;
+}
+
 interface QuoteStepPageProps {
   params: Promise<{
     quoteType: string;
@@ -22,63 +54,19 @@ function StepContent({ params }: QuoteStepPageProps) {
   const router = useRouter();
   const { formData, updateFormData } = useFormContext();
   const [errors, setErrors] = useState<string[]>([]);
-  const [selectedDrivers, setSelectedDrivers] = useState<string[]>([]);
-  const [selectedVehicles, setSelectedVehicles] = useState<string[]>([]);
-  const [drivers, setDrivers] = useState<any[]>([]);
-  const [vehicles, setVehicles] = useState<any[]>([]);
 
-  // Initialize selected drivers and vehicles from form data
-  useEffect(() => {
-    const driverIds = ['driver1', 'driver2', 'driver3'];
-    const vehicleIds = ['vehicle1', 'vehicle2', 'vehicle3'];
-    
-    const selectedDriversFromForm = driverIds.filter(id => formData[`selectedDriver_${id}`]);
-    const selectedVehiclesFromForm = vehicleIds.filter(id => formData[`selectedVehicle_${id}`]);
-    
-    setSelectedDrivers(selectedDriversFromForm);
-    setSelectedVehicles(selectedVehiclesFromForm);
-    
-    // Initialize drivers from form data
-    if (formData.drivers) {
-      try {
-        const savedDrivers = JSON.parse(formData.drivers as string);
-        setDrivers(savedDrivers);
-      } catch (e) {
-        console.error('Error parsing drivers data:', e);
-      }
-    }
-    
-    // Initialize vehicles from form data
-    if (formData.vehicles) {
-      try {
-        const savedVehicles = JSON.parse(formData.vehicles as string);
-        setVehicles(savedVehicles);
-      } catch (e) {
-        console.error('Error parsing vehicles data:', e);
-      }
-    }
-  }, [formData]);
+
+
+
 
   const { quoteType: quoteTypeParam, stepNumber: stepNumberParam } = use(params);
   const quoteType = quoteTypes[quoteTypeParam];
   const stepNumber = parseInt(stepNumberParam);
   const currentStep = quoteType?.steps.find(step => step.id === stepNumber);
 
-  if (!quoteType || !currentStep) {
-    return (
-      <div className="container">
-        <h1>Quote Type Not Found</h1>
-        <p>The requested quote type or step was not found.</p>
-        <button onClick={() => router.push('/')}>
-          Return to Home
-        </button>
-      </div>
-    );
-  }
-
   // Initialize default values for required fields in coverage step
   useEffect(() => {
-    if (currentStep.title === 'Coverage Information') {
+    if (currentStep && currentStep.title === 'Coverage Information') {
       const defaultValues: Record<string, string> = {};
       
       // Set default values for required fields that don't have values yet
@@ -98,7 +86,19 @@ function StepContent({ params }: QuoteStepPageProps) {
         updateFormData(defaultValues);
       }
     }
-  }, [currentStep.title, formData, updateFormData, currentStep.fields]);
+  }, [currentStep, formData, updateFormData]);
+
+  if (!quoteType || !currentStep) {
+    return (
+      <div className="container">
+        <h1>Quote Type Not Found</h1>
+        <p>The requested quote type or step was not found.</p>
+        <button onClick={() => router.push('/')}>
+          Return to Home
+        </button>
+      </div>
+    );
+  }
 
   const handleFieldChange = (fieldName: string, value: string | boolean) => {
     updateFormData({ [fieldName]: value });
@@ -128,7 +128,7 @@ function StepContent({ params }: QuoteStepPageProps) {
           if (!vehiclesData || vehiclesData.length === 0) {
             newErrors.push('At least one vehicle is required');
           } else {
-            vehiclesData.forEach((vehicle: any, index: number) => {
+            vehiclesData.forEach((vehicle: Vehicle, index: number) => {
               const vehicleNumber = index + 1;
               
               if (!vehicle.modelYear || vehicle.modelYear === '(Select)') {
@@ -142,7 +142,7 @@ function StepContent({ params }: QuoteStepPageProps) {
               }
             });
           }
-        } catch (e) {
+        } catch {
           newErrors.push('Vehicle information is invalid');
         }
       } else {
@@ -196,33 +196,21 @@ function StepContent({ params }: QuoteStepPageProps) {
   };
 
   const handleDriverSelectionChange = (driverId: string, selected: boolean) => {
-    setSelectedDrivers(prev => 
-      selected 
-        ? [...prev, driverId]
-        : prev.filter(id => id !== driverId)
-    );
-    // Also update form data for persistence
+    // Update form data for persistence
     updateFormData({ [`selectedDriver_${driverId}`]: selected });
   };
 
   const handleVehicleSelectionChange = (vehicleId: string, selected: boolean) => {
-    setSelectedVehicles(prev => 
-      selected 
-        ? [...prev, vehicleId]
-        : prev.filter(id => id !== vehicleId)
-    );
-    // Also update form data for persistence
+    // Update form data for persistence
     updateFormData({ [`selectedVehicle_${vehicleId}`]: selected });
   };
 
-  const handleDriversChange = (updatedDrivers: any[]) => {
-    setDrivers(updatedDrivers);
+  const handleDriversChange = (updatedDrivers: Driver[]) => {
     // Store drivers data in form context for persistence
     updateFormData({ drivers: JSON.stringify(updatedDrivers) });
   };
 
-  const handleVehiclesChange = (updatedVehicles: any[]) => {
-    setVehicles(updatedVehicles);
+  const handleVehiclesChange = (updatedVehicles: Vehicle[]) => {
     // Store vehicles data in form context for persistence
     updateFormData({ vehicles: JSON.stringify(updatedVehicles) });
   };
@@ -276,8 +264,6 @@ function StepContent({ params }: QuoteStepPageProps) {
             onDriverSelectionChange={handleDriverSelectionChange}
             onVehicleSelectionChange={handleVehicleSelectionChange}
             onRelationshipChange={(driverId, relationship) => updateFormData({ [`relationship_${driverId}`]: relationship })}
-            selectedDrivers={selectedDrivers}
-            selectedVehicles={selectedVehicles}
             formData={formData}
             namedInsuredInfo={{
               firstName: formData.firstName as string,
@@ -328,11 +314,9 @@ function StepContent({ params }: QuoteStepPageProps) {
             });
 
             const elements: React.ReactNode[] = [];
-            let ungroupedIndex = 0;
-            let groupIndex = 0;
 
             // Render fields in their original order, respecting groups
-            currentStep.fields.forEach((field, index) => {
+            currentStep.fields.forEach((field) => {
               if (field.group) {
                 // Check if this is the first field in this group
                 const groupFields = fieldGroups[field.group];
